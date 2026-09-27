@@ -27,6 +27,7 @@
     --term: "VT323", "Courier New", monospace;
   }
   html, body { background: var(--night); color: var(--chalk); }
+  [hidden] { display: none !important; }   /* our display rules must never beat the hidden attribute */
   body { font-family: var(--term); font-size: 20px; line-height: 1.15; }
   .wrap { max-width: 1000px; margin: 0 auto; padding: 20px 16px 40px; display: grid; gap: 14px; }
 
@@ -55,12 +56,24 @@
   .clock { font-size: clamp(14px, 2.6vw, 20px); color: var(--bulb); font-variant-numeric: tabular-nums; }
   .dd { font-size: clamp(7px, 1.2vw, 9px); color: var(--chalk); line-height: 1.6; }
 
-  .screen { position: relative; background: #000; border: 3px solid var(--line); line-height: 0; }
-  canvas { width: 100%; height: auto; image-rendering: pixelated; image-rendering: crisp-edges; display: block; }
-  .ticker { min-height: 2.4em; padding: 8px 12px; background: var(--panel); border-left: 4px solid var(--bulb);
-            font-size: 22px; line-height: 1.1; }
+  /* The console: the field on top, its deck attached underneath, sized so both fit on screen. */
+  .console { border: 3px solid var(--line); background: #000; }
+  .screen { position: relative; background: #050807; line-height: 0; }
+  canvas { display: block; margin-inline: auto; height: auto; image-rendering: pixelated; image-rendering: crisp-edges;
+           width: min(100%, max(480px, calc((100svh - 410px) * 16 / 9))); }
+  .deck { position: relative; display: grid; gap: 8px; padding: 6px 12px 10px; background: var(--panel); border-top: 3px solid var(--line); }
+  .deck-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+  .deck-gap { flex: 1 1 0; }
+  button.icon { display: inline-grid; place-items: center; padding: 8px 11px; line-height: 0; }
+  button.icon svg { display: block; }
+  button.play { background: var(--bulb); color: #1a1204; border-color: var(--bulb); }
+  button.play:hover { border-color: #fff; }
+  .corner { display: flex; align-items: center; gap: 12px; margin-left: auto; }
+  button.sound { padding: 8px 10px; }
+  button.sound[aria-pressed="false"] { color: var(--dim); }
+  .ticker { min-height: 1.2em; padding: 2px 120px 0 10px; border-left: 4px solid var(--bulb); font-size: 21px; line-height: 1.1; }
 
-  .controls { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+
   button { font-family: var(--pixel); font-size: 10px; color: var(--chalk); background: var(--panel-2);
            border: 2px solid var(--line); padding: 10px 12px; cursor: pointer; box-shadow: 0 3px 0 #000; }
   button:hover { border-color: var(--dim); }
@@ -69,10 +82,10 @@
   button[aria-pressed="true"] { background: var(--bulb); color: #1a1204; border-color: var(--bulb); }
   .seg { display: inline-flex; }
   .seg button + button { margin-left: -2px; }
-  .seed { margin-left: auto; color: var(--dim); font-size: 18px; }
+  .seed { position: absolute; right: 12px; bottom: 6px; color: var(--dim); font-size: 16px; }
 
   .panels { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr); gap: 14px; align-items: start; }
-  @media (max-width: 760px) { .panels { grid-template-columns: 1fr; } .seed { margin-left: 0; width: 100%; } }
+  @media (max-width: 760px) { .panels { grid-template-columns: 1fr; } .deck-gap { display: none; } .seed { position: static; } .ticker { padding-right: 0; } }
   section { background: var(--panel); border: 2px solid var(--line); min-width: 0; }
   section h2 { font-family: var(--pixel); font-size: 10px; letter-spacing: 1px; margin: 0; padding: 10px 12px;
                color: var(--dim); border-bottom: 2px solid var(--line); }
@@ -118,13 +131,14 @@
   .pick select { font-family: var(--term); font-size: 20px; color: var(--chalk); background: var(--panel-2); border: 2px solid var(--line);
                  padding: 4px 8px; max-width: 100%; min-width: 0; box-shadow: 0 3px 0 #000; }
   .pick select#match { flex: 1 1 22em; }
+  button.small { font-size: 8px; padding: 8px 10px; box-shadow: 0 2px 0 #000; }
   .pick select:focus-visible { outline: 2px solid var(--bulb); outline-offset: 2px; }
   .modes { display: flex; align-items: center; gap: 10px; }
   .modes-label { font-family: var(--pixel); font-size: 8px; color: var(--dim); letter-spacing: 1px; }
   .tname #homeName, .tname #awayName { display: block; }
 
   /* timeline: quarter marks and scoring snaps under a pixel scrubber */
-  .timeline { position: relative; padding-top: 14px; }
+  .timeline { position: relative; padding-top: 12px; }
   .marks { position: absolute; top: 0; bottom: 0; left: 7px; right: 7px; pointer-events: none; }
   .marks b { position: absolute; top: 0; transform: translateX(-2px); font: 8px var(--pixel); color: var(--dim); font-weight: normal; }
   .marks i { position: absolute; top: 16px; height: 22px; width: 3px; transform: translateX(-1px); box-shadow: 0 0 0 1px #000; }
@@ -180,12 +194,16 @@
     <div class="pick" id="pick" hidden>
       <label for="week">WEEK</label><select id="week"></select>
       <label for="match">MATCHUP</label><select id="match"></select>
+      <button type="button" id="changeLeague" class="small" hidden>CHANGE LEAGUE</button>
     </div>
-    <div class="modes">
-      <span class="modes-label" id="modesLabel">SCOREBOARD</span>
-      <span class="seg" role="group" aria-labelledby="modesLabel">
-        <button id="mFoot" aria-pressed="true">FOOTBALL</button><button id="mFant" aria-pressed="false">FANTASY</button>
-      </span>
+    <div class="corner">
+      <div class="modes">
+        <span class="modes-label" id="modesLabel">SCOREBOARD</span>
+        <span class="seg" role="group" aria-labelledby="modesLabel">
+          <button id="mFant" aria-pressed="true">FANTASY</button><button id="mFoot" aria-pressed="false">FOOTBALL</button>
+        </span>
+      </div>
+      <button id="sound" class="icon sound" aria-label="Sound" aria-pressed="true" title="Sound on / off"></button>
     </div>
   </header>
 
@@ -203,31 +221,33 @@
     <div class="team away"><span class="chip" id="awayChip"></span><span class="tname"><span id="awayName"></span><small id="awaySub"></small></span><span class="poss" id="awayPoss">&#9654;</span><span class="pts" id="awayPts">0</span></div>
   </div>
 
-  <div class="screen"><canvas id="field" width="320" height="180" aria-label="Pixel-art football field"></canvas></div>
-  <div class="ticker" id="ticker" aria-live="polite"><span id="tickerText">&nbsp;</span><span class="fps" id="tickerFp"></span></div>
-
-  <div class="timeline">
-    <div class="marks" id="marks" aria-hidden="true"></div>
-    <input type="range" id="scrub" min="0" max="0" value="0" step="1" aria-label="Game timeline, play by play">
-  </div>
-
-  <div class="controls">
-    <span class="seg" role="group" aria-label="Playback">
-      <button id="toStart" title="Back to the opening kickoff (Home)">START</button>
-      <button id="prev" title="Previous play (left arrow)">PREV</button>
-      <button id="play" aria-pressed="false">PAUSE</button>
-      <button id="next" title="Next play (right arrow)">NEXT</button>
-    </span>
-    <span class="seg" role="group" aria-label="Speed">
-      <button id="s1" data-speed="1" aria-pressed="true">1X</button>
-      <button id="s2" data-speed="2" aria-pressed="false">2X</button>
-      <button id="s4" data-speed="4" aria-pressed="false">4X</button>
-    </span>
-    <button id="nextScore">NEXT SCORE</button>
-    <button id="toFinal">FINAL</button>
-    <button id="newGame">NEW GAME</button>
-    <button id="sound" aria-pressed="true">SOUND ON</button>
-    <span class="seed" id="seed"></span>
+  <div class="console">
+    <div class="screen"><canvas id="field" width="320" height="180" aria-label="Pixel-art football field"></canvas></div>
+    <div class="deck">
+      <div class="timeline">
+        <div class="marks" id="marks" aria-hidden="true"></div>
+        <input type="range" id="scrub" min="0" max="0" value="0" step="1" aria-label="Game timeline, play by play">
+      </div>
+      <div class="deck-row">
+        <span class="seg transport" role="group" aria-label="Playback">
+          <button id="toStart" class="icon" aria-label="Back to the opening kickoff" title="Back to kickoff (Home)"><svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true" shape-rendering="crispEdges" fill="currentColor"><rect x="1" y="3" width="2" height="10"/><polygon points="9,3 9,13 3,8"/><polygon points="15,3 15,13 9,8"/></svg></button>
+          <button id="prev" class="icon" aria-label="Previous play" title="Previous play (←)"><svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true" shape-rendering="crispEdges" fill="currentColor"><rect x="2" y="3" width="2" height="10"/><polygon points="13,3 13,13 5,8"/></svg></button>
+          <button id="play" class="icon play" aria-label="Pause" title="Play / pause (space)"><svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true" shape-rendering="crispEdges" fill="currentColor"><rect x="3" y="2" width="4" height="12"/><rect x="9" y="2" width="4" height="12"/></svg></button>
+          <button id="next" class="icon" aria-label="Next play" title="Next play (→)"><svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true" shape-rendering="crispEdges" fill="currentColor"><polygon points="3,3 3,13 11,8"/><rect x="12" y="3" width="2" height="10"/></svg></button>
+        </span>
+        <span class="seg" role="group" aria-label="Speed">
+          <button id="s1" data-speed="1" aria-pressed="true">1X</button>
+          <button id="s2" data-speed="2" aria-pressed="false">2X</button>
+          <button id="s4" data-speed="4" aria-pressed="false">4X</button>
+        </span>
+        <span class="deck-gap"></span>
+        <button id="nextScore">NEXT SCORE</button>
+        <button id="toFinal">FINAL</button>
+        <button id="newGame" title="Same stat lines, a different game">NEW GAME</button>
+      </div>
+      <div class="ticker" id="ticker" aria-live="polite"><span id="tickerText">&nbsp;</span><span class="fps" id="tickerFp"></span></div>
+      <span class="seed" id="seed"></span>
+    </div>
   </div>
 
   <div class="panels">
@@ -245,7 +265,7 @@
     <div><strong>Fantasy mode</strong> switches the scoreboard to running fantasy points under the league's scoring. Each play shows what it earned, and the totals land exactly on Sleeper's numbers at the final whistle. A few points belong to no single play, such as a defense's points-allowed tier. Those arrive at the whistle with the reason attached. Click any name in the box score to see every play that scored for them, and jump to it.</div>
     <div><strong>The crawl</strong> along the bottom of the field runs like a broadcast ticker. It carries every fantasy point as it's earned, with the reason, plus touchdowns and field goals with the new score. Between plays it shows both teams' running fantasy totals.</div>
     <div><strong>Click any play</strong> in the play-by-play, drag the timeline, or use the arrow keys to move through the game. While paused, a jump plays that one snap and holds.</div>
-    <div><strong>Sound</strong> is 8-bit, synthesized in the page from NES-style square, triangle and noise channels. It starts on your first click, and SOUND OFF mutes it. In fantasy mode a coin rings when points land.</div>
+    <div><strong>Sound</strong> is 8-bit, synthesized in the page from NES-style square, triangle and noise channels. It starts on your first click, and the speaker at the top right mutes it. In fantasy mode a coin rings when points land.</div>
     <div><strong>New game</strong> reshuffles the same stat lines into a different game. The final score can't change, because the touchdowns and field goals are real.</div>
   </footer>
 </div>
@@ -772,8 +792,8 @@
   }
   const short = (p) => (p.slot === "DEF" ? (NFL[p.nfl] ? NFL[p.nfl][0] : p.name) + " D" : p.last);
 
-  let mode = "football";
-  try { if (localStorage.getItem("slb-mode") === "fantasy") mode = "fantasy"; } catch (err) { /* private window */ }
+  let mode = "fantasy";
+  try { if (localStorage.getItem("slb-mode") === "football") mode = "football"; } catch (err) { /* private window */ }
   // Running state, rebuilt from event 0 on every seek so any moment of the game is reachable.
   let simStats = {}, fant = { home: 0, away: 0 }, foot = { home: 0, away: 0 }, earned = {};
   let resolvedUpTo = -1, lastText = " ", lastFp = [];
@@ -1237,7 +1257,8 @@
     speed = s;
     for (const id of ["s1", "s2", "s4"]) $(id).setAttribute("aria-pressed", String(+$(id).dataset.speed === s));
   }
-  function syncPlay() { $("play").textContent = paused ? "PLAY" : "PAUSE"; $("play").setAttribute("aria-pressed", String(paused)); }
+  const ICON_PLAY = '<svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true" shape-rendering="crispEdges" fill="currentColor"><polygon points="4,2 13,8 4,14"/></svg>', ICON_PAUSE = '<svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true" shape-rendering="crispEdges" fill="currentColor"><rect x="3" y="2" width="4" height="12"/><rect x="9" y="2" width="4" height="12"/></svg>';
+  function syncPlay() { $("play").innerHTML = paused ? ICON_PLAY : ICON_PAUSE; $("play").setAttribute("aria-label", paused ? "Play" : "Pause"); }
   function setPaused(p) { paused = p; playOnce = false; syncPlay(); }
   $("play").onclick = () => {
     // at the final whistle, PLAY starts the game over
@@ -1325,6 +1346,7 @@
     const pick = games.find((g) => g.id === id) || mine || games[0];
     loadMatchup(w, pick.id);
     $("game").hidden = false; $("pick").hidden = false;
+    if (!BAKED) { $("finder").hidden = true; $("changeLeague").hidden = false; }
   }
   $("week").addEventListener("change", () => showWeek(+$("week").value, null));
   $("match").addEventListener("change", () => loadMatchup(+$("week").value, +$("match").value));
@@ -1467,10 +1489,14 @@
 
   // ---- boot -------------------------------------------------------------------------
   setMode(mode);
-  function syncSound() { $("sound").textContent = SFX.on ? "SOUND ON" : "SOUND OFF"; $("sound").setAttribute("aria-pressed", String(SFX.on)); }
+  const SPEAKER = '<rect x="1" y="5" width="3" height="6"/><polygon points="4,5 8,2 8,14 4,11"/>';
+  const ICON_SOUND = '<svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true" shape-rendering="crispEdges" fill="currentColor"></svg>'.replace("</svg>", SPEAKER + '<rect x="10" y="6" width="1" height="4"/><rect x="12" y="4" width="1" height="8"/><rect x="14" y="2" width="1" height="12"/></svg>');
+  const ICON_MUTE = '<svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true" shape-rendering="crispEdges" fill="currentColor"></svg>'.replace("</svg>", SPEAKER + '<rect x="10" y="5" width="1" height="1"/><rect x="11" y="6" width="1" height="1"/><rect x="12" y="7" width="1" height="2"/><rect x="13" y="9" width="1" height="1"/><rect x="14" y="10" width="1" height="1"/><rect x="14" y="5" width="1" height="1"/><rect x="13" y="6" width="1" height="1"/><rect x="11" y="9" width="1" height="1"/><rect x="10" y="10" width="1" height="1"/></svg>');
+  function syncSound() { $("sound").innerHTML = SFX.on ? ICON_SOUND : ICON_MUTE; $("sound").setAttribute("aria-pressed", String(SFX.on)); $("sound").title = SFX.on ? "Sound on. Click to mute." : "Muted. Click for sound."; }
   $("sound").onclick = () => { SFX.set(!SFX.on); syncSound(); };
   syncSound();
   for (const ev of ["pointerdown", "keydown"]) document.addEventListener(ev, () => SFX.wake(), { capture: true });
+  $("changeLeague").addEventListener("click", () => { $("finder").hidden = false; $("who").select(); $("who").focus(); });
   $("finder").addEventListener("submit", (ev) => { ev.preventDefault(); findLeagues($("who").value).catch((err) => setStatus(err.message, true)); });
   const fontsReady = document.fonts && document.fonts.load ? Promise.all([document.fonts.load("8px 'Press Start 2P'"), document.fonts.load("16px 'Press Start 2P'")]).catch(() => {}) : Promise.resolve();
   Promise.race([fontsReady, new Promise((r) => setTimeout(r, 2500))]).then(async () => {
