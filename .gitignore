@@ -1,0 +1,5 @@
+stat_line_bowl.html
+players.json
+*.html
+!template.html
+__pycache__/
