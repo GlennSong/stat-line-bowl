@@ -1,49 +1,84 @@
 # Stat Line Bowl
 
-Aechelon's Sleeper matchups played as 8-bit pixel-art football. Every play is a
-real stat from a real starter's week.
+Your Sleeper fantasy matchup, played out as an 8-bit football game. Every snap is
+a real stat from one of your starters' real week.
 
-    python3 build_game.py              # every week with scores -> stat_line_bowl.html
-    python3 build_game.py --week 2 x.html
+**Play it:** https://glennsong.github.io/stat-line-bowl/ — type your Sleeper
+username (or paste a league ID), pick a week and a matchup.
 
-Python 3 standard library only; no installs. The first build fetches Sleeper's
-14 MB player database and caches it as `players.json`. The built page is
-regenerated each time and not tracked (it carries every league lineup).
-The league and user IDs are at the top of `build_game.py`.
+## How it works
 
-Published at https://claude.ai/artifact/VrPA4Nxg1XjiqQZwtxKuTm. To update it,
-rebuild, then republish `stat_line_bowl.html` to that URL. Rebuild after Sunday's
-games to complete an in-progress week, and each week to add the next one.
+- **Stat lines become plays.** Each carry, target, catch, drop, sack and
+  interception in a starter's line for the week is one play, at its real
+  yardage. The kicker's field goals come from the distance ranges he actually
+  kicked from. Each fantasy DEF supplies the sacks and picks against the other
+  side.
+- **A director builds drives** that obey the rules: four downs, ten yards,
+  nothing but a touchdown crosses the goal line. A fantasy lineup covers only
+  about 60% of a real offense's snaps. When a drive needs a play no starter's
+  line can supply, an **unrostered teammate** takes it and earns no fantasy
+  points.
+- **Fantasy mode** runs the league's own scoring settings play by play. The
+  totals land exactly on Sleeper's numbers at the final whistle. Points that
+  belong to no single play, such as a defense's points-allowed tier, arrive at
+  the whistle with the reason attached.
+- Scrub the timeline, click any play to replay it, open a player to see every
+  play that scored for them. The broadcast crawl carries the fantasy points
+  and the scores. Sound is synthesized in the page from NES-style square,
+  triangle and noise channels.
 
-- `engine.js` turns stat lines into plays (tokens), then directs drives under the
-  rules. It emits events carrying stat deltas and fantasy points.
-- `template.html` is the page: scenes, sound, scoreboard, crawl, box score.
-- The build inlines both, plus the data.
+Everything runs in the browser against [Sleeper's public read-only
+API](https://docs.sleeper.com/). There's no server, no key, and nothing is
+stored except in your own browser.
 
-## Deliberate choices — don't "fix" these
+## Running it
+
+It's a static page. Serve the folder and open it:
+
+    python3 -m http.server 8000     # then http://localhost:8000
+
+`index.html` + `engine.js` are the whole app. `engine.js` is the simulation
+(stat lines → plays → drives → events with stat and fantasy deltas).
+`index.html` holds the renderer, sound, scoreboard, crawl, box score and the
+league loader.
+
+### A self-contained copy
+
+`build_game.py` bakes one league's data into a single HTML file that needs no
+network, for sharing somewhere that can't reach Sleeper:
+
+    python3 build_game.py --league <league_id> [--me <user_id>] [--week N] [out.html]
+
+Python 3 standard library only. It caches Sleeper's player database as
+`players.json` on first run.
+
+## Deliberate choices
 
 - **Defenses wear their fantasy DEF's NFL colors; offenses wear the fantasy
-  team's colors.** A team looks different on each side of the ball (Week 2:
-  McConkey Kong's defense is the Broncos, in orange). The sacks and picks
-  really came from that NFL team's game. Glenn asked why they change color,
-  heard the reason, and chose to keep it (2026-09-27). The page's footer
-  explains it.
-- **Football score ≠ fantasy result.** The football score counts only
-  TDs/FGs/XPs from the stat lines, so fantasy yards and sacks don't show up in
-  it. Upsets and even ties (Week 1 Zay vs Resilient, 43–43) are real outcomes
-  of the data, not bugs.
-- **Unrostered teammates** take the snaps no starter's line can supply; a
-  fantasy lineup is only ~60% of an offense. They never earn fantasy points.
-- **Fantasy totals must land exactly on Sleeper's numbers.** Points no play
-  carries (points-allowed tier, an XP with no TD here to follow, a real play the
-  field never had room for) arrive at the final whistle *with the reason*.
-- League scoring comes from `scoring_settings`, not half-PPR defaults: 6-pt
-  pass TD, −2 INT, DEF tiers, ff +1.
+  team's colors.** A team looks different on each side of the ball, because
+  its sacks and picks came from that NFL team's game.
+- **The football score is not the fantasy result.** The football score counts
+  only the touchdowns, field goals and extra points in the stat lines, while
+  fantasy also pays for yards and sacks. Upsets and ties are real outcomes of
+  the data.
+- **"New game" can't change the final score**, only the story: the scoring
+  plays are fixed by the stats.
+
+## Limits
+
+- **Superflex / 2-QB:** only one QB throws. The second QB's runs play normally,
+  and his passing points arrive at the final whistle as "other real-game
+  scoring".
+- **IDP:** individual defenders' points arrive the same way; they don't take
+  the field.
+- **Regular season only** (weeks 1–18).
 
 ## Testing
 
-A screenshot only shows the first frame. v1 shipped a freeze at the end of Q1
-that a screenshot could never catch. Use jsdom with a stub canvas and drive the
-controls and scrubber through every event; a fake `AudioContext` that counts
-nodes exercises the synth. Scripts from 2026-09-27 lived in the session
-scratchpad; the pattern is in the journal that day.
+A screenshot shows only the first frame. The version that froze at the end of
+the first quarter looked fine in one. Instead, drive the page in jsdom with a
+stub canvas and a real `fetch`: load a league, visit every matchup and check the
+fantasy totals against Sleeper's, then scrub every event of a game. A fake
+`AudioContext` that counts nodes exercises the sound.
+
+Not affiliated with Sleeper or the NFL.

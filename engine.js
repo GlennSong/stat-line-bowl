@@ -110,7 +110,8 @@
       const opp = teams[side === "home" ? "away" : "home"];
       const oppDef = opp.def;
       const od = (oppDef && oppDef.s) || {};
-      const offense = me.T.players.filter((p) => !["K", "DEF"].includes(p.slot));
+      // individual defensive players (IDP) score, but not by carrying the ball
+      const offense = me.T.players.filter((p) => !["K", "DEF"].includes(p.slot) && !/^(DL|LB|DB|DE|DT|CB|S|IDP_FLEX)$/.test(p.pos));
       const toks = me.tokens;
 
       for (const p of offense) {

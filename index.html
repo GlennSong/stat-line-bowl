@@ -1,3 +1,10 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="Your Sleeper fantasy football matchup, played out as an 8-bit football game from your players' real stat lines.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' shape-rendering='crispEdges'%3E%3Crect width='16' height='16' fill='%230b1210'/%3E%3Crect x='3' y='5' width='10' height='6' fill='%237a3f1b'/%3E%3Crect x='5' y='4' width='6' height='8' fill='%237a3f1b'/%3E%3Crect x='6' y='7' width='4' height='1' fill='%23f2e6c8'/%3E%3Crect x='7' y='6' width='1' height='3' fill='%23f2e6c8'/%3E%3Crect x='9' y='6' width='1' height='3' fill='%23f2e6c8'/%3E%3C/svg%3E">
 <title>Stat Line Bowl</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -92,6 +99,19 @@
   tr.tot td { color: var(--bulb); font-family: var(--pixel); font-size: 9px; }
 
   .title { display: grid; gap: 4px; }
+  .game { display: grid; gap: 14px; }
+  .finder { display: grid; gap: 8px; background: var(--panel); border: 2px solid var(--line); padding: 12px; }
+  .finder label { font-family: var(--pixel); font-size: 9px; letter-spacing: 1px; color: var(--dim); }
+  .finder .row { display: flex; gap: 8px; }
+  .finder input { flex: 1 1 auto; min-width: 0; font-family: var(--term); font-size: 22px; color: var(--chalk); background: #070b0a;
+                  border: 2px solid var(--line); padding: 6px 10px; }
+  .finder input:focus-visible { outline: 2px solid var(--bulb); outline-offset: 2px; }
+  .leagues { display: flex; flex-wrap: wrap; gap: 8px; }
+  .leagues:empty { display: none; }
+  .leagues button { font-family: var(--term); font-size: 20px; }
+  .leagues button span { color: var(--dim); }
+  .status { margin: 0; color: var(--dim); font-size: 19px; min-height: 1.2em; }
+  .status.bad { color: #ff8a7a; }
   header { align-items: center; }
   .pick { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; order: 3; width: 100%; }
   .pick label { font-family: var(--pixel); font-size: 8px; color: var(--dim); letter-spacing: 1px; }
@@ -151,11 +171,13 @@
   footer strong { color: var(--chalk); font-weight: normal; }
   @media (prefers-reduced-motion: reduce) { button:active { transform: none; } }
 </style>
+</head>
+<body>
 
 <div class="wrap">
   <header>
     <div class="title"><h1>STAT LINE BOWL</h1><div class="sub" id="sub"></div></div>
-    <div class="pick">
+    <div class="pick" id="pick" hidden>
       <label for="week">WEEK</label><select id="week"></select>
       <label for="match">MATCHUP</label><select id="match"></select>
     </div>
@@ -167,6 +189,14 @@
     </div>
   </header>
 
+  <form class="finder" id="finder" hidden>
+    <label for="who">SLEEPER USERNAME OR LEAGUE ID</label>
+    <div class="row"><input id="who" name="who" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="your Sleeper username"><button type="submit">FIND</button></div>
+    <div class="leagues" id="leagues"></div>
+    <p class="status" id="status" role="status" aria-live="polite"></p>
+  </form>
+
+  <div id="game" class="game" hidden>
   <div class="board" aria-live="off">
     <div class="team home"><span class="chip" id="homeChip"></span><span class="tname"><span id="homeName"></span><small id="homeSub"></small></span><span class="poss" id="homePoss">&#9664;</span><span class="pts" id="homePts">0</span></div>
     <div class="mid"><div class="clock" id="clock">Q1 15:00</div><div class="dd" id="dd">KICKOFF</div></div>
@@ -205,11 +235,13 @@
     <section><h2>BOX SCORE &middot; SIM VS REAL</h2><div class="box"><table id="box"></table></div></section>
   </div>
 
+  </div>
+
   <footer>
     <div><strong>How it works.</strong> Every carry, target, catch, drop, sack and interception in each starter's real stat line for the week becomes one play, at its real yardage. The kicker's field goals come from the distance buckets he actually kicked from. The fantasy DEF supplies the sacks and picks against the other side.</div>
     <div>A director arranges those plays into drives that obey the rules: four downs, ten yards, nobody but a touchdown crosses the goal line. Where a drive needs a snap no starter's line can supply, an <strong>unrostered teammate</strong> takes it. That player never counts toward fantasy stats. When the rules push a starter's yards off his real total, a <span class="flag"></span> marks it in the box score.</div>
-    <div><strong>Uniforms.</strong> Offenses wear their fantasy team's colors. Defenses wear the real NFL colors of that team's fantasy DEF, because the sacks and picks came from that NFL team's game. So a team looks different on each side of the ball: in Week 2, McConkey Kong's defense takes the field as the Broncos.</div>
-    <div><strong>Every matchup</strong> in the league is here, for every week with scores. Pick one from the menus; &#9733; marks your team. A week still being played uses the stat lines so far, and rebuilding the page after the games finish completes it.</div>
+    <div><strong>Uniforms.</strong> Offenses wear their fantasy team's colors. Defenses wear the real NFL colors of that team's fantasy DEF, because the sacks and picks came from that NFL team's game. So a team looks different on each side of the ball: in Week 2, a team whose fantasy DEF is Denver defends in Broncos orange.</div>
+    <div><strong>Any Sleeper league.</strong> Type a username to find your leagues, or paste a league ID. Every matchup of every scored week is playable, and &#9733; marks your team. A week still being played uses the stat lines so far. Each game has its own link to send around. Data comes straight from Sleeper's public API, and nothing is stored anywhere but your browser.</div>
     <div><strong>Fantasy mode</strong> switches the scoreboard to running fantasy points under the league's scoring. Each play shows what it earned, and the totals land exactly on Sleeper's numbers at the final whistle. A few points belong to no single play, such as a defense's points-allowed tier. Those arrive at the whistle with the reason attached. Click any name in the box score to see every play that scored for them, and jump to it.</div>
     <div><strong>The crawl</strong> along the bottom of the field runs like a broadcast ticker. It carries every fantasy point as it's earned, with the reason, plus touchdowns and field goals with the new score. Between plays it shows both teams' running fantasy totals.</div>
     <div><strong>Click any play</strong> in the play-by-play, drag the timeline, or use the arrow keys to move through the game. While paused, a jump plays that one snap and holds.</div>
@@ -218,8 +250,8 @@
   </footer>
 </div>
 
-<script>const LEAGUE = /*__DATA__*/null;</script>
-<script>/*__ENGINE__*/</script>
+<script>const BAKED_LEAGUE = /*__DATA__*/null;</script>
+<script src="engine.js"></script>
 <script>
 (function () {
   "use strict";
@@ -229,6 +261,7 @@
   const W = 320, H = 180, PX = 5;            // canvas px, px per yard
   const FW = 120, FH = 53.33, M = 12;        // field in yards, stand margin
   const MIDY = FH / 2;
+  const IDP = /^(DL|LB|DB|DE|DT|CB|S|IDP_FLEX)$/;   // individual defenders: they score, but don't line up on offense
   const cv = $("field"), ctx = cv.getContext("2d");
   ctx.imageSmoothingEnabled = false;
 
@@ -415,7 +448,7 @@
     };
     const c = e.carrier && e.carrier.slot !== "QB" ? e.carrier : null;
     if (c) place(c);
-    for (const p of T.players) if (!["QB", "K", "DEF"].includes(p.slot) && (!c || p.id !== c.id)) place(p);
+    for (const p of T.players) if (!["QB", "K", "DEF"].includes(p.slot) && !IDP.test(p.pos) && (!c || p.id !== c.id)) place(p);
     const skill = {};
     for (const s of Object.keys(spots)) {
       const p = filled[s];
@@ -1238,9 +1271,14 @@
   });
 
   // ---- week and matchup ------------------------------------------------------------
-  const weeks = Object.keys(LEAGUE.weeks).map(Number).sort((a, b) => a - b);
+  // Two ways in: a copy built with data baked in (build_game.py), or live, where the
+  // page asks for a Sleeper username or league ID and fetches everything itself.
+  let LEAGUE = BAKED_LEAGUE;
+  const BAKED = !!LEAGUE;
+  let weeks = BAKED ? Object.keys(LEAGUE.weeks).map(Number).sort((a, b) => a - b) : [];
   const star = (T) => (T.me ? "★ " : "");
   const pts = (v) => (+v).toFixed(2);
+  const pickKey = () => `slb-pick-${LEAGUE.id || "baked"}`;
   function fillWeeks() {
     $("week").innerHTML = weeks.map((w) => `<option value="${w}">WEEK ${w}${LEAGUE.live === w ? " (IN PROGRESS)" : ""}</option>`).join("");
   }
@@ -1263,38 +1301,194 @@
     $("homeChip").style.background = looks.home.jersey; $("awayChip").style.background = looks.away.jersey;
     $("sub").textContent = `${LEAGUE.league} · Week ${w}, ${LEAGUE.season}` +
       (LEAGUE.live === w ? " · in progress: stat lines so far" : "") + ` · real fantasy ${pts(g.home.points)}–${pts(g.away.points)}`;
-    try { localStorage.setItem("slb-pick", `${w}-${g.id}`); } catch (err) { /* fine */ }
-    try { history.replaceState(null, "", `#w${w}-m${g.id}`); } catch (err) { /* the frame may refuse */ }
+    try { localStorage.setItem(pickKey(), `${w}-${g.id}`); } catch (err) { /* fine */ }
+    try {
+      if (BAKED) history.replaceState(null, "", `#w${w}-m${g.id}`);
+      else {
+        const q = new URLSearchParams({ league: LEAGUE.id, week: w, matchup: g.id });
+        if (LEAGUE.user) q.set("user", LEAGUE.user);
+        history.replaceState(null, "", `?${q}`);
+      }
+    } catch (err) { /* a sandboxed frame may refuse */ }
     drawField();
     newGame(w * 1000 + g.id * 17 + 7);
   }
-  $("week").addEventListener("change", () => { const w = +$("week").value; const mine = LEAGUE.weeks[w].find((g) => g.home.me || g.away.me); loadMatchup(w, (mine || LEAGUE.weeks[w][0]).id); });
+  async function showWeek(w, id) {
+    if (!BAKED) {
+      setStatus(`Loading week ${w}…`);
+      try { await ensureWeek(w); } catch (err) { setStatus(err.message, true); return; }
+      setStatus("");
+    }
+    const games = LEAGUE.weeks[w];
+    if (!games || !games.length) { setStatus(`No matchups in week ${w}.`, true); return; }
+    const mine = games.find((g) => g.home.me || g.away.me);
+    const pick = games.find((g) => g.id === id) || mine || games[0];
+    loadMatchup(w, pick.id);
+    $("game").hidden = false; $("pick").hidden = false;
+  }
+  $("week").addEventListener("change", () => showWeek(+$("week").value, null));
   $("match").addEventListener("change", () => loadMatchup(+$("week").value, +$("match").value));
-  // Where to start: a #w2-m6 link, then the last pick here, then my latest finished matchup.
+  // Where to start: a link, then the last pick here, then my latest finished matchup.
   function firstPick() {
-    const m = /^#w(\d+)-m(\d+)$/.exec(location.hash || "");
-    let pick = m ? [+m[1], +m[2]] : null;
-    if (!pick) { try { const v = localStorage.getItem("slb-pick"); if (v) pick = v.split("-").map(Number); } catch (err) { /* fine */ } }
-    if (pick && LEAGUE.weeks[pick[0]]) return pick;
+    let pick = null;
+    if (BAKED) {
+      const m = /^#w(\d+)-m(\d+)$/.exec(location.hash || "");
+      if (m) pick = [+m[1], +m[2]];
+    } else {
+      const q = new URLSearchParams(location.search);
+      if (q.get("league") === LEAGUE.id && q.get("week")) pick = [+q.get("week"), q.get("matchup") ? +q.get("matchup") : null];
+    }
+    if (!pick) { try { const v = localStorage.getItem(pickKey()); if (v) pick = v.split("-").map(Number); } catch (err) { /* fine */ } }
+    if (pick && weeks.includes(pick[0])) return pick;
     const done = weeks.filter((w) => w !== LEAGUE.live);
-    const w = done.length ? done[done.length - 1] : weeks[weeks.length - 1];
-    const mine = LEAGUE.weeks[w].find((g) => g.home.me || g.away.me);
-    return [w, (mine || LEAGUE.weeks[w][0]).id];
+    return [done.length ? done[done.length - 1] : weeks[weeks.length - 1], null];
+  }
+
+  // ---- live: any Sleeper league, fetched in the browser -----------------------------
+  // Sleeper's API is public, read-only and open to browsers. The stats endpoint outside
+  // /v1 carries each player's name and team, so the 14 MB player list is only needed
+  // for a starter with no stat row that week.
+  const API = "https://api.sleeper.app";
+  const KEEP = ["pass_att", "pass_cmp", "pass_yd", "pass_td", "pass_int", "pass_sack", "pass_sack_yds",
+    "rush_att", "rush_yd", "rush_td", "rush_lng", "rush_tkl_loss", "rush_tkl_loss_yd",
+    "rec_tgt", "rec", "rec_yd", "rec_td", "rec_lng", "rec_drop", "fum_lost",
+    "fga", "fgm", "xpa", "xpm", "fgm_lng", "sack", "sack_yd", "int", "fum_rec", "def_td", "safe", "pts_allow",
+    "def_kr_ypa", "ff", "blk_kick", "rec_2pt", "rush_2pt", "pass_2pt", "pts_half_ppr", "fg_list"];
+  const FG_BUCKETS = ["0_19", "20_29", "30_39", "40_49", "50_59", "60p"];
+  const NOT_STARTERS = new Set(["BN", "IR", "TAXI"]);
+  function setStatus(msg, bad) { $("status").textContent = msg; $("status").classList.toggle("bad", !!bad); }
+  async function getJSON(path) {
+    let r;
+    try { r = await fetch(API + path); } catch (err) { throw new Error("Couldn't reach Sleeper. Check your connection and try again."); }
+    if (!r.ok) throw new Error(`Sleeper answered ${r.status} for ${path}.`);
+    return r.json();
+  }
+  let playerDB = null;
+  function bigPlayerDB() {
+    if (!playerDB) { setStatus("Fetching Sleeper's player list for a few missing names (2.6 MB, once)…"); playerDB = getJSON("/v1/players/nfl"); }
+    return playerDB;
+  }
+
+  async function findLeagues(q) {
+    q = q.trim();
+    if (!q) { setStatus("Type a Sleeper username or a league ID.", true); return; }
+    $("leagues").innerHTML = "";
+    if (/^\d{9,}$/.test(q)) return openLeague(q, null);
+    setStatus("Looking…");
+    const user = await getJSON(`/v1/user/${encodeURIComponent(q)}`).catch(() => null);
+    if (!user || !user.user_id) { setStatus(`No Sleeper user called “${q}”. Check the spelling, or paste a league ID from the league's URL.`, true); return; }
+    const state = await getJSON("/v1/state/nfl");
+    let season = state.league_season || state.season;
+    let leagues = await getJSON(`/v1/user/${user.user_id}/leagues/nfl/${season}`);
+    if (!leagues.length && state.previous_season) { season = state.previous_season; leagues = await getJSON(`/v1/user/${user.user_id}/leagues/nfl/${season}`); }
+    if (!leagues.length) { setStatus(`${user.display_name} has no NFL leagues on Sleeper for ${season}.`, true); return; }
+    if (leagues.length === 1) return openLeague(leagues[0].league_id, user);
+    setStatus(`${user.display_name}'s leagues for ${season}. Pick one:`);
+    $("leagues").innerHTML = leagues.map((l) =>
+      `<button type="button" data-league="${esc(l.league_id)}">${esc(l.name)} <span>${l.total_rosters} teams</span></button>`).join("");
+    $("leagues").onclick = (ev) => { const b = ev.target.closest("button[data-league]"); if (b) openLeague(b.dataset.league, user); };
+  }
+
+  async function openLeague(id, user) {
+    try {
+      setStatus("Loading the league…");
+      $("leagues").innerHTML = "";
+      const [league, users, rosters, state] = await Promise.all([
+        getJSON(`/v1/league/${id}`), getJSON(`/v1/league/${id}/users`), getJSON(`/v1/league/${id}/rosters`), getJSON("/v1/state/nfl")]);
+      if (!league || !league.league_id) throw new Error(`No Sleeper league with ID ${id}.`);
+      const season = league.season;
+      const current = season === state.season && state.season_type === "regular" ? state.week : null;
+      const all = Array.from({ length: current || 18 }, (_, i) => i + 1);
+      const mus = await Promise.all(all.map((w) => getJSON(`/v1/league/${id}/matchups/${w}`).catch(() => [])));
+      const raw = {};
+      all.forEach((w, i) => { if ((mus[i] || []).some((m) => m.points)) raw[w] = mus[i]; });
+      if (!Object.keys(raw).length) throw new Error(`${league.name} has no scored weeks yet. Come back after the first games.`);
+      const byUser = {}, byRoster = {};
+      for (const u of users) byUser[u.user_id] = u;
+      for (const r of rosters) byRoster[r.roster_id] = r;
+      LEAGUE = {
+        id, season, league: league.name, scoring: league.scoring_settings || {}, weeks: {}, raw,
+        live: current && raw[current] ? current : null,
+        users: byUser, rosters: byRoster,
+        slots: (league.roster_positions || []).filter((s) => !NOT_STARTERS.has(s)),
+        me: user ? user.user_id : null, user: user ? user.username || user.display_name : null,
+      };
+      weeks = Object.keys(raw).map(Number).sort((a, b) => a - b);
+      fillWeeks();
+      try { localStorage.setItem("slb-league", JSON.stringify({ id, user: LEAGUE.user })); } catch (err) { /* fine */ }
+      $("who").value = LEAGUE.user || id;
+      setStatus("");
+      const [w, mid] = firstPick();
+      await showWeek(w, mid);
+    } catch (err) { setStatus(err.message, true); }
+  }
+
+  async function ensureWeek(w) {
+    if (LEAGUE.weeks[w]) return;
+    const rows = await getJSON(`/stats/nfl/${LEAGUE.season}/${w}?season_type=regular`);
+    const stats = {}, info = {};
+    for (const r of rows) { stats[r.player_id] = r.stats || {}; if (r.player) info[r.player_id] = Object.assign({ team: r.team }, r.player); }
+    const missing = [];
+    for (const m of LEAGUE.raw[w]) for (const pid of m.starters || []) if (pid && pid !== "0" && !info[pid] && !NFL[pid]) missing.push(pid);
+    if (missing.length) { const db = await bigPlayerDB(); for (const pid of missing) if (db[pid]) info[pid] = db[pid]; }
+    const pairs = {};
+    for (const m of LEAGUE.raw[w]) if (m.matchup_id != null) (pairs[m.matchup_id] = pairs[m.matchup_id] || []).push(m);
+    const games = [];
+    for (const [mid, pair] of Object.entries(pairs)) {
+      if (pair.length !== 2) continue;
+      let [a, b] = pair.map((m) => liveTeam(m, stats, info));
+      // my team is always home; otherwise the lower roster id is
+      if (b.me || (!a.me && b.rid < a.rid)) [a, b] = [b, a];
+      games.push({ id: +mid, home: a, away: b });
+    }
+    LEAGUE.weeks[w] = games.sort((x, y) => x.id - y.id);
+  }
+  function liveTeam(mu, stats, info) {
+    const r = LEAGUE.rosters[mu.roster_id] || {}, u = LEAGUE.users[r.owner_id] || {};
+    const players = [];
+    (mu.starters || []).forEach((pid, i) => {
+      const slot = LEAGUE.slots[i];
+      if (!pid || pid === "0" || !slot) return;   // an empty slot scores zero and fields nobody
+      const p = info[pid] || {}, s = Object.assign({}, stats[pid] || {});
+      for (const b of FG_BUCKETS) for (const kind of ["fgm", "fgmiss"]) {
+        if (s[`${kind}_${b}`]) (s.fg_list = s.fg_list || []).push([kind, b, s[`${kind}_${b}`] | 0]);
+      }
+      const isDef = slot === "DEF" || p.position === "DEF" || !!NFL[pid];
+      const keep = {};
+      for (const k of KEEP) if (k in s) keep[k] = s[k];
+      const last = p.last_name || (isDef && NFL[pid] ? NFL[pid][0] : pid);
+      players.push({ id: pid, slot, pos: p.position || (isDef ? "DEF" : slot), name: `${p.first_name || ""} ${last}`.trim(), last,
+        nfl: p.team || (isDef ? pid : ""), num: p.number, fpts: (mu.players_points || {})[pid] || 0, s: keep });
+    });
+    const me = !!LEAGUE.me && (r.owner_id === LEAGUE.me || (r.co_owners || []).includes(LEAGUE.me));
+    return { rid: mu.roster_id, name: (u.metadata && u.metadata.team_name) || u.display_name || `Team ${mu.roster_id}`,
+      points: mu.points || 0, me, players };
   }
 
   // ---- boot -------------------------------------------------------------------------
-  fillWeeks();
   setMode(mode);
   function syncSound() { $("sound").textContent = SFX.on ? "SOUND ON" : "SOUND OFF"; $("sound").setAttribute("aria-pressed", String(SFX.on)); }
   $("sound").onclick = () => { SFX.set(!SFX.on); syncSound(); };
   syncSound();
   for (const ev of ["pointerdown", "keydown"]) document.addEventListener(ev, () => SFX.wake(), { capture: true });
+  $("finder").addEventListener("submit", (ev) => { ev.preventDefault(); findLeagues($("who").value).catch((err) => setStatus(err.message, true)); });
   const fontsReady = document.fonts && document.fonts.load ? Promise.all([document.fonts.load("8px 'Press Start 2P'"), document.fonts.load("16px 'Press Start 2P'")]).catch(() => {}) : Promise.resolve();
-  Promise.race([fontsReady, new Promise((r) => setTimeout(r, 2500))]).then(() => {
+  Promise.race([fontsReady, new Promise((r) => setTimeout(r, 2500))]).then(async () => {
     if (window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches) setPaused(true);
-    const [w, id] = firstPick();
-    loadMatchup(w, id);
     requestAnimationFrame(loop);
+    if (BAKED) { fillWeeks(); const [w, id] = firstPick(); return showWeek(w, id); }
+    $("finder").hidden = false;
+    // A shared link (?league=…) or the league used last time opens straight to a game.
+    const q = new URLSearchParams(location.search);
+    let saved = null;
+    try { saved = JSON.parse(localStorage.getItem("slb-league") || "null"); } catch (err) { /* fine */ }
+    const lid = q.get("league") || (saved && saved.id);
+    const uname = q.get("league") ? q.get("user") : saved && saved.user;
+    if (!lid) { $("who").focus(); return; }
+    const user = uname ? await getJSON(`/v1/user/${encodeURIComponent(uname)}`).catch(() => null) : null;
+    openLeague(lid, user && user.user_id ? user : null);
   });
 })();
 </script>
+</body>
+</html>
