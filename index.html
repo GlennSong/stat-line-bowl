@@ -1322,8 +1322,9 @@
     $("homeChip").style.background = looks.home.jersey; $("awayChip").style.background = looks.away.jersey;
     $("sub").textContent = `${LEAGUE.league} · Week ${w}, ${LEAGUE.season}` +
       (LEAGUE.live === w ? " · in progress: stat lines so far" : "") + ` · real fantasy ${pts(g.home.points)}–${pts(g.away.points)}`;
-    try { localStorage.setItem(pickKey(), `${w}-${g.id}`); } catch (err) { /* fine */ }
-    try {
+    if (LEAGUE.demo) $("sub").textContent = `Demo · Week ${w}, ${LEAGUE.season} · the week's best real stat lines, snake-drafted · half-PPR`;
+    else try { localStorage.setItem(pickKey(), `${w}-${g.id}`); } catch (err) { /* fine */ }
+    if (!LEAGUE.demo) try {
       if (BAKED) history.replaceState(null, "", `#w${w}-m${g.id}`);
       else {
         const q = new URLSearchParams({ league: LEAGUE.id, week: w, matchup: g.id });
@@ -1345,8 +1346,8 @@
     const mine = games.find((g) => g.home.me || g.away.me);
     const pick = games.find((g) => g.id === id) || mine || games[0];
     loadMatchup(w, pick.id);
-    $("game").hidden = false; $("pick").hidden = false;
-    if (!BAKED) { $("finder").hidden = true; $("changeLeague").hidden = false; }
+    $("game").hidden = false; $("pick").hidden = !!LEAGUE.demo;
+    if (!BAKED && !LEAGUE.demo) { $("finder").hidden = true; $("changeLeague").hidden = false; }
   }
   $("week").addEventListener("change", () => showWeek(+$("week").value, null));
   $("match").addEventListener("change", () => loadMatchup(+$("week").value, +$("match").value));
@@ -1487,6 +1488,60 @@
       points: mu.points || 0, me, players };
   }
 
+  // ---- demo: no league yet, so play the week's best real stat lines ------------------
+  // The top performers of the latest finished week, snake-drafted into two lineups
+  // under Sleeper's default half-PPR scoring. Public NFL stats only: no one's league.
+  const HALF_PPR = {
+    pass_yd: 0.04, pass_td: 4, pass_int: -1, pass_2pt: 2, rush_yd: 0.1, rush_td: 6, rush_2pt: 2,
+    rec: 0.5, rec_yd: 0.1, rec_td: 6, rec_2pt: 2, fum_lost: -2, fgm_0_19: 3, fgm_20_29: 3, fgm_30_39: 3,
+    fgm_40_49: 4, fgm_50_59: 5, fgm_60p: 5, fgmiss: -1, xpm: 1, xpmiss: -1, sack: 1, int: 2, fum_rec: 2,
+    def_td: 6, safe: 2, ff: 1, blk_kick: 2, pts_allow_0: 10, pts_allow_1_6: 7, pts_allow_7_13: 4,
+    pts_allow_14_20: 1, pts_allow_21_27: 0, pts_allow_28_34: -1, pts_allow_35p: -4,
+  };
+  const DEMO_SLOTS = ["QB", "RB", "RB", "WR", "WR", "TE", "FLEX", "K", "DEF"];
+  async function startDemo() {
+    try {
+      const state = await getJSON("/v1/state/nfl");
+      const inSeason = state.season_type === "regular" && state.week > 1;
+      const season = inSeason ? state.season : state.previous_season || state.season;
+      const w = inSeason ? state.week - 1 : 17;
+      const rows = await getJSON(`/stats/nfl/${season}/${w}?season_type=regular`);
+      const pool = rows.filter((r) => r.player && r.stats && r.stats.pts_half_ppr != null)
+        .sort((a, b) => b.stats.pts_half_ppr - a.stats.pts_half_ppr);
+      const teams = [{ name: "Sunday Best", open: DEMO_SLOTS.slice(), players: [] },
+                     { name: "Stat Padders", open: DEMO_SLOTS.slice(), players: [] }];
+      const fits = (slot, pos) => slot === pos || (slot === "FLEX" && ["RB", "WR", "TE"].includes(pos));
+      const taken = new Set();
+      // snake order: A B B A A B B A …
+      for (let pick = 0; pick < DEMO_SLOTS.length * 2; pick++) {
+        const round = Math.floor(pick / 2), t = teams[(round % 2) ^ (pick % 2)];
+        const r = pool.find((x) => !taken.has(x.player_id) && t.open.some((s) => fits(s, x.player.position)));
+        if (!r) continue;
+        taken.add(r.player_id);
+        const slot = t.open.find((s) => s === r.player.position) || t.open.find((s) => fits(s, r.player.position));
+        t.open.splice(t.open.indexOf(slot), 1);
+        const s = Object.assign({}, r.stats);
+        for (const b of FG_BUCKETS) for (const kind of ["fgm", "fgmiss"]) {
+          if (s[`${kind}_${b}`]) (s.fg_list = s.fg_list || []).push([kind, b, s[`${kind}_${b}`] | 0]);
+        }
+        const keep = {};
+        for (const k of KEEP) if (k in s) keep[k] = s[k];
+        const p = r.player, isDef = p.position === "DEF";
+        const last = p.last_name || (NFL[r.player_id] ? NFL[r.player_id][0] : r.player_id);
+        t.players.push({ id: r.player_id, slot, pos: p.position, name: `${p.first_name || ""} ${last}`.trim(), last,
+          nfl: r.team || p.team || (isDef ? r.player_id : ""), fpts: s.pts_half_ppr || 0, s: keep });
+      }
+      const order = (T) => T.players.sort((a, b) => DEMO_SLOTS.indexOf(a.slot) - DEMO_SLOTS.indexOf(b.slot));
+      const [A, B] = teams.map((T, i) => ({ rid: i + 1, name: T.name, me: false, players: order(T),
+        points: Math.round(T.players.reduce((a, p) => a + p.fpts, 0) * 100) / 100 }));
+      LEAGUE = { id: "demo", demo: true, season, league: "Demo", scoring: HALF_PPR, live: null, weeks: { [w]: [{ id: 1, home: A, away: B }] } };
+      weeks = [w];
+      fillWeeks();
+      await showWeek(w, 1);
+      setStatus(`That's a demo: Week ${w}'s best real stat lines, drafted into two teams. Enter your Sleeper username to play your own matchup.`);
+    } catch (err) { setStatus(`${err.message} Enter your Sleeper username to play your own matchup.`, true); }
+  }
+
   // ---- boot -------------------------------------------------------------------------
   setMode(mode);
   const SPEAKER = '<rect x="1" y="5" width="3" height="6"/><polygon points="4,5 8,2 8,14 4,11"/>';
@@ -1510,7 +1565,7 @@
     try { saved = JSON.parse(localStorage.getItem("slb-league") || "null"); } catch (err) { /* fine */ }
     const lid = q.get("league") || (saved && saved.id);
     const uname = q.get("league") ? q.get("user") : saved && saved.user;
-    if (!lid) { $("who").focus(); return; }
+    if (!lid) { startDemo(); return; }
     const user = uname ? await getJSON(`/v1/user/${encodeURIComponent(uname)}`).catch(() => null) : null;
     openLeague(lid, user && user.user_id ? user : null);
   });

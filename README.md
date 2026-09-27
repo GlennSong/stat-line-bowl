@@ -4,7 +4,10 @@ Your Sleeper fantasy matchup, played out as an 8-bit football game. Every snap i
 a real stat from one of your starters' real week.
 
 **Play it:** https://glennsong.github.io/stat-line-bowl/ — type your Sleeper
-username (or paste a league ID), pick a week and a matchup.
+username (or paste a league ID), pick a week and a matchup. With no league
+entered, it plays a demo: the latest finished week's best real stat lines,
+snake-drafted into two teams. The last league you opened is remembered in your
+browser only.
 
 ## How it works
 
