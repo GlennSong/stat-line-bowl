@@ -272,7 +272,6 @@
   </footer>
 </div>
 
-<script>const BAKED_LEAGUE = /*__DATA__*/null;</script>
 <script src="engine.js"></script>
 <script>
 (function () {
@@ -289,6 +288,12 @@
 
   // ---- looks ---------------------------------------------------------------
   const PALETTES = [
+    { helmet: "#f4f1ea", jersey: "#fbfaf5", trim: "#e0344e", pants: "#d4cdbd" },
+    { helmet: "#5a3218", jersey: "#8a5328", trim: "#e0302b", pants: "#6b3b1c" },
+    { helmet: "#b3121b", jersey: "#d8232a", trim: "#ffd23f", pants: "#f1e9d8" },
+    { helmet: "#1c1f1a", jersey: "#262a22", trim: "#9dff3a", pants: "#3a4034" },
+    { helmet: "#1b1b1b", jersey: "#f2a900", trim: "#1b1b1b", pants: "#2a2a2a" },
+    { helmet: "#5b2a86", jersey: "#7b3fb0", trim: "#f2d7ff", pants: "#d9cde6" },
     { helmet: "#0b3d2e", jersey: "#e9e3d0", trim: "#0b3d2e", pants: "#0b3d2e" },
     { helmet: "#f2f2f2", jersey: "#0e6f8f", trim: "#f2f2f2", pants: "#f2f2f2" },
     { helmet: "#7a0e3a", jersey: "#c0266a", trim: "#ffd6e6", pants: "#e6dfe2" },
@@ -301,16 +306,6 @@
     { helmet: "#1b1b1b", jersey: "#2b2b2b", trim: "#e7c14a", pants: "#b9b2a0" },
   ];
   function teamLook(T) {
-    const n = T.name.toLowerCase();
-    if (/albino/.test(n)) return { helmet: "#f4f1ea", jersey: "#fbfaf5", trim: "#e0344e", pants: "#d4cdbd" };
-    if (/kong/.test(n)) return { helmet: "#5a3218", jersey: "#8a5328", trim: "#e0302b", pants: "#6b3b1c" };
-    if (/chili|red hot/.test(n)) return { helmet: "#b3121b", jersey: "#d8232a", trim: "#ffd23f", pants: "#f1e9d8" };
-    if (/cowboy/.test(n)) return { helmet: "#c2c7cc", jersey: "#f4f4f4", trim: "#0a2a5e", pants: "#b8c0c6" };
-    if (/nuke/.test(n)) return { helmet: "#1c1f1a", jersey: "#262a22", trim: "#9dff3a", pants: "#3a4034" };
-    if (/airfield|lighting/.test(n)) return { helmet: "#1b1b1b", jersey: "#f2a900", trim: "#1b1b1b", pants: "#2a2a2a" };
-    if (/laporta/.test(n)) return { helmet: "#b0b7bc", jersey: "#0076b6", trim: "#e8eef2", pants: "#b0b7bc" };
-    if (/vivi/.test(n)) return { helmet: "#5b2a86", jersey: "#7b3fb0", trim: "#f2d7ff", pants: "#d9cde6" };
-    if (/engine/.test(n)) return { helmet: "#111", jersey: "#8b1a1a", trim: "#d9b23a", pants: "#1d1d1d" };
     let h = 0;
     for (const c of T.name) h = (h * 31 + c.charCodeAt(0)) >>> 0;
     return PALETTES[h % PALETTES.length];
@@ -356,7 +351,7 @@
     // end zones
     const ez = [[0, looks.home], [110, looks.away]];
     for (const [x0, lk] of ez) {
-      f.fillStyle = lk.helmet === "#f4f1ea" ? "#b8243a" : lk.jersey;
+      f.fillStyle = lk.jersey === "#fbfaf5" ? lk.trim : lk.jersey;   // a white jersey would wash out the end zone
       f.fillRect(px(x0), py(0), 10 * PX, Math.round(FH * PX));
       f.fillStyle = "rgba(0,0,0,.18)";
       for (let y = 0; y < FH; y += 2) f.fillRect(px(x0), py(y), 10 * PX, 1);
@@ -1294,14 +1289,12 @@
   });
 
   // ---- week and matchup ------------------------------------------------------------
-  // Two ways in: a copy built with data baked in (build_game.py), or live, where the
-  // page asks for a Sleeper username or league ID and fetches everything itself.
-  let LEAGUE = BAKED_LEAGUE;
-  const BAKED = !!LEAGUE;
-  let weeks = BAKED ? Object.keys(LEAGUE.weeks).map(Number).sort((a, b) => a - b) : [];
+  // The page asks for a Sleeper username or league ID and fetches everything itself.
+  let LEAGUE = null;
+  let weeks = [];
   const star = (T) => (T.me ? "★ " : "");
   const pts = (v) => (+v).toFixed(2);
-  const pickKey = () => `slb-pick-${LEAGUE.id || "baked"}`;
+  const pickKey = () => `slb-pick-${LEAGUE.id}`;
   function fillWeeks() {
     $("week").innerHTML = weeks.map((w) => `<option value="${w}">WEEK ${w}${LEAGUE.live === w ? " (IN PROGRESS)" : ""}</option>`).join("");
   }
@@ -1327,42 +1320,32 @@
     if (LEAGUE.demo) $("sub").textContent = `Demo · Week ${w}, ${LEAGUE.season} · the week's best real stat lines, snake-drafted · half-PPR`;
     else try { localStorage.setItem(pickKey(), `${w}-${g.id}`); } catch (err) { /* fine */ }
     if (!LEAGUE.demo) try {
-      if (BAKED) history.replaceState(null, "", `#w${w}-m${g.id}`);
-      else {
-        const q = new URLSearchParams({ league: LEAGUE.id, week: w, matchup: g.id });
-        if (LEAGUE.user) q.set("user", LEAGUE.user);
-        history.replaceState(null, "", `?${q}`);
-      }
+      const q = new URLSearchParams({ league: LEAGUE.id, week: w, matchup: g.id });
+      if (LEAGUE.user) q.set("user", LEAGUE.user);
+      history.replaceState(null, "", `?${q}`);
     } catch (err) { /* a sandboxed frame may refuse */ }
     drawField();
     newGame(w * 1000 + g.id * 17 + 7);
   }
   async function showWeek(w, id) {
-    if (!BAKED) {
-      setStatus(`Loading week ${w}…`);
-      try { await ensureWeek(w); } catch (err) { setStatus(err.message, true); return; }
-      setStatus("");
-    }
+    setStatus(`Loading week ${w}…`);
+    try { await ensureWeek(w); } catch (err) { setStatus(err.message, true); return; }
+    setStatus("");
     const games = LEAGUE.weeks[w];
     if (!games || !games.length) { setStatus(`No matchups in week ${w}.`, true); return; }
     const mine = games.find((g) => g.home.me || g.away.me);
     const pick = games.find((g) => g.id === id) || mine || games[0];
     loadMatchup(w, pick.id);
     $("game").hidden = false; $("pick").hidden = !!LEAGUE.demo;
-    if (!BAKED && !LEAGUE.demo) { $("finder").hidden = true; $("changeLeague").hidden = false; }
+    if (!LEAGUE.demo) { $("finder").hidden = true; $("changeLeague").hidden = false; }
   }
   $("week").addEventListener("change", () => showWeek(+$("week").value, null));
   $("match").addEventListener("change", () => loadMatchup(+$("week").value, +$("match").value));
   // Where to start: a link, then the last pick here, then my latest finished matchup.
   function firstPick() {
     let pick = null;
-    if (BAKED) {
-      const m = /^#w(\d+)-m(\d+)$/.exec(location.hash || "");
-      if (m) pick = [+m[1], +m[2]];
-    } else {
-      const q = new URLSearchParams(location.search);
-      if (q.get("league") === LEAGUE.id && q.get("week")) pick = [+q.get("week"), q.get("matchup") ? +q.get("matchup") : null];
-    }
+    const q = new URLSearchParams(location.search);
+    if (q.get("league") === LEAGUE.id && q.get("week")) pick = [+q.get("week"), q.get("matchup") ? +q.get("matchup") : null];
     if (!pick) { try { const v = localStorage.getItem(pickKey()); if (v) pick = v.split("-").map(Number); } catch (err) { /* fine */ } }
     if (pick && weeks.includes(pick[0])) return pick;
     const done = weeks.filter((w) => w !== LEAGUE.live);
@@ -1554,7 +1537,7 @@
   syncSound();
   for (const ev of ["pointerdown", "keydown"]) document.addEventListener(ev, () => SFX.wake(), { capture: true });
   // The finder, opened over a league that's already playing, can always be backed out of.
-  const haveLeague = () => !!LEAGUE && !LEAGUE.demo && !BAKED;
+  const haveLeague = () => !!LEAGUE && !LEAGUE.demo;
   function openFinder() {
     $("finder").hidden = false;
     $("cancelFind").hidden = $("demoLine").hidden = !haveLeague();
@@ -1581,7 +1564,6 @@
   Promise.race([fontsReady, new Promise((r) => setTimeout(r, 2500))]).then(async () => {
     if (window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches) setPaused(true);
     requestAnimationFrame(loop);
-    if (BAKED) { fillWeeks(); const [w, id] = firstPick(); return showWeek(w, id); }
     $("finder").hidden = false;
     // A shared link (?league=…) or the league used last time opens straight to a game.
     const q = new URLSearchParams(location.search);

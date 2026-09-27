@@ -1,5 +1,4 @@
-stat_line_bowl.html
-players.json
 *.html
 !index.html
+players.json
 __pycache__/

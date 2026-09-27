@@ -45,16 +45,6 @@ It's a static page. Serve the folder and open it:
 `index.html` holds the renderer, sound, scoreboard, crawl, box score and the
 league loader.
 
-### A self-contained copy
-
-`build_game.py` bakes one league's data into a single HTML file that needs no
-network, for sharing somewhere that can't reach Sleeper:
-
-    python3 build_game.py --league <league_id> [--me <user_id>] [--week N] [out.html]
-
-Python 3 standard library only. It caches Sleeper's player database as
-`players.json` on first run.
-
 ## Deliberate choices
 
 - **Defenses wear their fantasy DEF's NFL colors; offenses wear the fantasy
