@@ -1,5 +1,5 @@
 stat_line_bowl.html
 players.json
 *.html
-!template.html
+!index.html
 __pycache__/

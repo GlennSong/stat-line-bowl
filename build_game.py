@@ -6,20 +6,22 @@ each player's *real* stat line — and bakes them into one page (template.html +
 engine.js + data). The page has a week and matchup picker; its engine spends
 those stat lines as plays under football rules and animates the result.
 
-Usage:  build_game.py [out.html]        (default: stat_line_bowl.html)
-        build_game.py --week N [out]    only week N, e.g. to test
+The same page (index.html) also runs live: served as-is, it asks for a Sleeper
+username or league ID and fetches everything in the browser. This script is for
+a self-contained copy that needs no network, like a private artifact.
+
+Usage:  build_game.py --league LEAGUE_ID [--me USER_ID] [--week N] [out.html]
+        (default out: stat_line_bowl.html; --me stars your team)
 """
-import json, os, sys, urllib.request
+import json, os, re, sys, urllib.request
 
 API = "https://api.sleeper.app/v1"
-LEAGUE = "1397343112786882560"
-ME = "1395211841235357696"
 HERE = os.path.dirname(os.path.abspath(__file__))
 # Sleeper's player database is 14 MB and changes slowly: reuse the fantasy
 # folder's copy when this lives inside it, otherwise fetch and cache it here.
 PLAYERS = next((p for p in (os.path.join(HERE, "..", "players.json"), os.path.join(HERE, "players.json"))
                 if os.path.exists(p)), os.path.join(HERE, "players.json"))
-TEMPLATE = os.path.join(HERE, "template.html")
+TEMPLATE = os.path.join(HERE, "index.html")
 
 # Only what the engine spends. Everything else in the stat line is noise here.
 KEEP = [
@@ -41,9 +43,14 @@ def get(url):
 
 def main():
     args = sys.argv[1:]
-    only = None
-    if "--week" in args:
-        i = args.index("--week"); only = int(args[i + 1]); del args[i:i + 2]
+    opts = {}
+    for flag in ("--league", "--me", "--week"):
+        if flag in args:
+            i = args.index(flag); opts[flag] = args[i + 1]; del args[i:i + 2]
+    if "--league" not in opts:
+        sys.exit(__doc__)
+    LEAGUE, ME = opts["--league"], opts.get("--me")
+    only = int(opts["--week"]) if "--week" in opts else None
     out = args[0] if args else os.path.join(HERE, "stat_line_bowl.html")
 
     state = get(f"{API}/state/nfl")
@@ -55,7 +62,7 @@ def main():
     rosters = {r["roster_id"]: r for r in get(f"{API}/league/{LEAGUE}/rosters")}
     users = {u["user_id"]: u for u in get(f"{API}/league/{LEAGUE}/users")}
     league = get(f"{API}/league/{LEAGUE}")
-    slots = [s for s in league["roster_positions"] if s not in ("BN", "IR")]
+    slots = [s for s in league["roster_positions"] if s not in ("BN", "IR", "TAXI")]
 
     def team(mu, stats):
         r = rosters[mu["roster_id"]]
@@ -118,7 +125,10 @@ def main():
     engine = open(os.path.join(HERE, "engine.js")).read()
     html = (open(TEMPLATE).read()
             .replace("/*__DATA__*/null", json.dumps(data, separators=(",", ":")).replace("</", "<\\/"))
-            .replace("/*__ENGINE__*/", engine))
+            .replace('<script src="engine.js"></script>', "<script>" + engine + "</script>"))
+    # The artifact host supplies its own document shell; keep only the page itself.
+    html = re.sub(r"<!doctype html>\n<html[^>]*>\n<head>\n(<meta[^>]*>\n|<link rel=\"icon\"[^>]*>\n)*", "", html, count=1)
+    html = html.replace("</head>\n<body>\n", "", 1).replace("\n</body>\n</html>\n", "\n", 1)
     open(out, "w").write(html)
     print(f"wrote {out} ({len(html) // 1024} KB): weeks {sorted(weeks)} x {max(len(g) for g in weeks.values())} matchups"
           + (f", week {current} in progress" if data["live"] else ""))
