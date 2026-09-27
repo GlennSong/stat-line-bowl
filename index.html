@@ -125,6 +125,7 @@
   .leagues button span { color: var(--dim); }
   .status { margin: 0; color: var(--dim); font-size: 19px; min-height: 1.2em; }
   .status.bad { color: #ff8a7a; }
+  .demo-line { margin: 0; color: var(--dim); font-size: 18px; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; }
   header { align-items: center; }
   .pick { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; order: 3; width: 100%; }
   .pick label { font-family: var(--pixel); font-size: 8px; color: var(--dim); letter-spacing: 1px; }
@@ -209,9 +210,10 @@
 
   <form class="finder" id="finder" hidden>
     <label for="who">SLEEPER USERNAME OR LEAGUE ID</label>
-    <div class="row"><input id="who" name="who" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="your Sleeper username"><button type="submit">FIND</button></div>
+    <div class="row"><input id="who" name="who" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="your Sleeper username"><button type="submit">FIND</button><button type="button" id="cancelFind" hidden>CANCEL</button></div>
     <div class="leagues" id="leagues"></div>
     <p class="status" id="status" role="status" aria-live="polite"></p>
+    <p class="demo-line" id="demoLine" hidden>Want the demo instead? <button type="button" id="toDemo" class="small">WATCH THE DEMO</button> This forgets your league in this browser.</p>
   </form>
 
   <div id="game" class="game" hidden>
@@ -1551,7 +1553,29 @@
   $("sound").onclick = () => { SFX.set(!SFX.on); syncSound(); };
   syncSound();
   for (const ev of ["pointerdown", "keydown"]) document.addEventListener(ev, () => SFX.wake(), { capture: true });
-  $("changeLeague").addEventListener("click", () => { $("finder").hidden = false; $("who").select(); $("who").focus(); });
+  // The finder, opened over a league that's already playing, can always be backed out of.
+  const haveLeague = () => !!LEAGUE && !LEAGUE.demo && !BAKED;
+  function openFinder() {
+    $("finder").hidden = false;
+    $("cancelFind").hidden = $("demoLine").hidden = !haveLeague();
+    $("who").select(); $("who").focus();
+  }
+  function closeFinder() {
+    if (!haveLeague()) return;   // nothing to go back to
+    $("finder").hidden = true; $("leagues").innerHTML = ""; setStatus("");
+    $("who").value = LEAGUE.user || LEAGUE.id;
+    $("changeLeague").focus();
+  }
+  $("changeLeague").addEventListener("click", openFinder);
+  $("cancelFind").addEventListener("click", closeFinder);
+  $("finder").addEventListener("keydown", (ev) => { if (ev.key === "Escape") { ev.preventDefault(); closeFinder(); } });
+  $("toDemo").addEventListener("click", () => {
+    try { localStorage.removeItem("slb-league"); } catch (err) { /* fine */ }
+    try { history.replaceState(null, "", location.pathname); } catch (err) { /* fine */ }
+    $("changeLeague").hidden = $("cancelFind").hidden = $("demoLine").hidden = true;
+    $("pick").hidden = true; $("leagues").innerHTML = ""; $("who").value = "";
+    startDemo();
+  });
   $("finder").addEventListener("submit", (ev) => { ev.preventDefault(); findLeagues($("who").value).catch((err) => setStatus(err.message, true)); });
   const fontsReady = document.fonts && document.fonts.load ? Promise.all([document.fonts.load("8px 'Press Start 2P'"), document.fonts.load("16px 'Press Start 2P'")]).catch(() => {}) : Promise.resolve();
   Promise.race([fontsReady, new Promise((r) => setTimeout(r, 2500))]).then(async () => {
